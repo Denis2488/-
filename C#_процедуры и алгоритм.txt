@@ -1,0 +1,194 @@
+private const short North   = 0x0001;
+private const short South   = 0x0002;
+private const short West    = 0x0004;
+private const short East    = 0x0008;
+
+public struct Coordinates
+{
+    public int X;
+    public int Y;
+
+     public Coordinates( int x, int y )
+     {
+        X = x;
+        Y = y;
+     }
+}
+
+private Dictionary<Coordinates, short> _rooms = 
+                                      new Dictionary<Coordinates,short>();
+
+public string DescribeMaze()
+{
+    //удаляем первый шаг
+    char[] firstRun     = _pathFromEntrance.Substring( 1 ).ToCharArray();
+    char[] secondRun    = _pathFromExit.Substring( 1 ).ToCharArray();
+
+    //устанавливаем с какой стороны мы пришли и куда направляемся
+    short from      = North;
+    short facing    = South;
+    Coordinates xy  = new Coordinates( 0, 0 ); //set first room as reference
+
+    //двигаемся по лабиринту от входа к выходу
+    for( int i = 0; i < firstRun.Length; i++ )
+    {
+       move( firstRun[i], ref from, ref facing, ref xy, i == firstRun.Length - 1 );
+    }
+
+     //повернуться
+     short temp  = facing;
+     facing      = from;
+     from        = temp;
+
+     //посещение неизведанных комнат
+     for( int i = 0; i < secondRun.Length; i++ )
+     {
+        move( secondRun[i], ref from, ref facing, ref xy, i == secondRun.Length - 1 );
+     }
+
+     return this.ToString();
+}
+
+//пермещение в соседнюю или изменение направления
+private void move( char turn, ref short from, ref short facing, ref Coordinates xy, bool lastMove )
+{
+     switch( turn )
+     {
+        case 'L':
+           faceLeft( ref facing ); break;
+        case 'R':
+           faceRight( ref facing ); break;
+        case 'W':
+           if( !_rooms.ContainsKey( xy ) )
+               rooms.Add( xy, from ); 
+           else
+               _rooms[xy] |= from; 
+           moveForward( facing, ref from, ref xy, lastMove );
+           break;
+     }
+}
+
+//повернувшись налево меняем направление
+private void faceLeft( ref short facing )
+{
+    switch( facing )
+    {
+       case South:
+           facing = East;
+           break;
+       case North:
+           facing = West;
+           break;
+       case East:
+           facing = North;
+           break;
+        case West:
+           facing = South;
+           break;
+    }
+}
+
+//то же и направо
+private void faceRight( ref short facing )
+{
+     switch( facing )
+     {
+        case South:
+            facing = West;
+            break;
+        case North:
+            facing = East;
+            break;
+         case East:
+            facing = South;
+             break;
+         case West:
+             facing = North;
+             break;
+     }
+}
+
+//переход в другую комнату
+private void moveForward( short facing, ref short from, ref Coordinates xy, bool lastMove )
+{
+    //фиксируем проход
+    _rooms[xy] |= facing;
+
+    //изменяем прежнее направление
+    switch( facing )
+    {
+       case South:
+            from = North;
+            break;
+       case North:
+            from = South;
+            break;
+       case East:
+            from = West;
+            break;
+       case West:
+            from = East;
+            break;
+    }
+
+    //при выходе из лабиринта координаты не обновляются
+    if( lastMove )
+        return;
+
+    //обновление текущей позиции
+    switch( facing )
+    {
+        case South:
+            xy.Y++;
+            break;
+        case North:
+             xy.Y--;
+             break;
+        case East:
+             xy.X++;
+             break;
+         case West:
+             xy.X--;
+             break;
+    }
+
+    //отслеживание минимальных и максимальных расстояний
+     if( xy.X > MaxX )
+         MaxX = xy.X;
+     if( xy.X < MinX )
+         MinX = xy.X;
+     if( xy.Y > MaxY )
+         MaxY = xy.Y;
+     if( xy.Y < MinY )
+         MinY = xy.Y;
+}
+
+public override string ToString()
+{
+    StringBuilder sb = new StringBuilder();
+
+    int startRoomX = Math.Abs( MinX );
+    int startRoomY = 0;
+
+    //получаем количество строк и столбцов
+    int C = Math.Abs( MinX ) + Math.Abs( MaxX ) + 1;
+    int R = Math.Abs( MinY ) + Math.Abs( MaxY ) + 1;
+
+    char[,] output = new char[C, R];
+
+    foreach( KeyValuePair<Coordinates, short> pair in _rooms )
+    {
+        output[startRoomX + pair.Key.X, startRoomY + pair.Key.Y] = hexVals[ pair.Value - 1 ];
+    }
+
+    for( int i = 0; i < R; i++ )
+    {
+        for( int j = 0; j < C; j++ )
+        {
+            sb.Append( output[j, i] );
+        }
+        sb.AppendLine();
+    }
+
+    return sb.ToString();
+}
